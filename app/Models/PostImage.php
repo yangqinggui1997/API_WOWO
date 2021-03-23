@@ -17,22 +17,20 @@ class PostImage extends Model
     public function getPostImage($params = [])
     {
         $default_args = [
-            'id_parent' => '',
-            'order_by' => 'sort ASC',
+            'id_post' => ''
         ];
-
         $args = array_merge($default_args, $params);
         $list_key = implode(',',[
             'id',
             'icon',
-            'duongdantin',
+            'duongdantin AS directory_of_news',
         ]);
         $where = "";
-        if(!empty($args['id_parent']))
-            $where = " id_parent = ". $args['id_parent'];
+        if(!empty($args['id_post']))
+            $where = " id_parent = ". $args['id_post'];
         try
         {
-            $query = DB::select("SELECT ". $list_key ." FROM ". $this->prefix ."baiviet_img ". ($where ? "WHERE  ".$where : "")." ORDER BY ".$args['order_by']);
+            $query = DB::select("SELECT ". $list_key ." FROM ". $this->prefix ."baiviet_img ". ($where ? "WHERE  ".$where : "")." ORDER BY sort ASC");
             if(!$query)
                 return false;
             return $query;

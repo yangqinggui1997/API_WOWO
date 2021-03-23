@@ -18,10 +18,9 @@ class Comment extends Model
         $default_args = [
             'id' => -1,
             'id_parent' => -1,
-            'order_by' => 'id ASC',
             'id_post'  => -1,
-            'page'     => 0,
-            'comment_per_page'  => 1,
+            'page'     => 1,
+            'comments_per_page'  => 6,
         ];
 
         $args = array_merge($default_args, $args);
@@ -39,6 +38,8 @@ class Comment extends Model
             'user.hoten',
             'user.icon',
         ]);
+        $start = ((int)$args['page']*(int)$args['comments_per_page']) - (int)$args['comments_per_page'];
+        $numview = (int)$args['comments_per_page'];
         if($args['id_post'] >= 1 && $args['id_parent'] >= 0 && $args['id'] >= 1)
             $query_string = "SELECT ".$list_key." FROM ".$this->prefix."binhluan AS cment LEFT JOIN ".$this->prefix."members AS user ON cment.uid = user.id WHERE cment.showhi = 1 AND cment.id = ".$args['id']." AND cment.id_sp = ".$args['id_post']." AND cment.id_parent = ".$args['id_parent']. " ORDER BY cment.id ASC";
         else if ($args['id_post'] >= 1 && $args['id_parent'] >= 0)
@@ -55,25 +56,24 @@ class Comment extends Model
             $query_string = "SELECT ".$list_key." FROM ".$this->prefix."binhluan AS cment LEFT JOIN ".$this->prefix."members AS user ON cment.uid = user.id WHERE cment.showhi = 1 AND cment.id_parent = ".$args['id_parent']." ORDER BY cment.id ASC";
         try
         {
-            $query = DB::select($query_string.($args["comment_per_page"] != 0 ? " LIMIT ".$args["page"].", ".$args["comment_per_page"] : ""));
-            if(!$query){
-                return false;
-            }
             $data = [];
+            $query = DB::select($query_string." LIMIT ".$start.", ".$numview);
+            if(!$query)
+                return $data;
             foreach($query as $bl){
                 $obj = new \stdClass();
                 $obj->id = $bl->id;
                 $obj->id_post = $bl->id_sp;
-                $obj->ip_gui = $bl->ip_gui;
-                $obj->ten_nguoi_gui = $bl->tenbaiviet_vi;
-                $obj->noidung_vi = $bl->noidung_vi;
-                $obj->loai_binhluan = $bl->loai_binhluan;
+                $obj->ip_sent = $bl->ip_gui;
+                $obj->title_of_post = $bl->tenbaiviet_vi;
+                $obj->content = $bl->noidung_vi;
+                $obj->type_of_comment = $bl->loai_binhluan;
                 $obj->showhi = $bl->showhi;
-                $obj->ngay_dang = $bl->ngay_dang;
+                $obj->date_of_post = $bl->ngay_dang;
                 $obj->id_parent = $bl->id_parent;
                 $obj->user = [
                         'id' => $bl->uid,
-                        'hoten' => $bl->hoten,
+                        'name' => $bl->hoten,
                         'icon' => $bl->icon ? $this->endpoint."datafiles/member/".$bl->uid."/".$bl->icon : "images/user_thumb.png"
                 ];
                 $data[] = $obj;
@@ -83,8 +83,8 @@ class Comment extends Model
         }
         catch(\Throwable $thr)
         {
-            return $thr->getMessage();
-            // return false;
+            // return $thr->getMessage();
+            return false;
         }
     }
 
@@ -92,10 +92,7 @@ class Comment extends Model
         $default_args = [
             'id' => -1,
             'id_parent' => -1,
-            'order_by' => 'id ASC',
             'id_post'  => -1,
-            'page'     => 0,
-            'page'  => 1,
         ];
         $args = array_merge($default_args, $args);
 
@@ -106,13 +103,13 @@ class Comment extends Model
         $where = $id.$id_parent.$id_post;
         try
         {
-            $query = DB::select("SELECT id FROM `". $this->prefix ."binhluan` WHERE `showhi` =  1".$where." ORDER BY ".$args["order_by"].(($args["page"] != 0 || $args["page"] != 1) ? " LIMIT ".$args["page"].", ".$args["page"] : ""));
+            $query = DB::select("SELECT id FROM `". $this->prefix ."binhluan` WHERE `showhi` =  1".$where);
             return count($query);
         }
         catch(\Throwable $thr)
         {
-            // return false;
-            return $thr->getMessage();
+            return false;
+            // return $thr->getMessage();
         }
     }
 

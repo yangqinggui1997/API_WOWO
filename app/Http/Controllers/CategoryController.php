@@ -34,17 +34,16 @@ class CategoryController extends Controller
             $data[$key] = $value;
         }
         $categories = $closure($data);
-        if($categories)
+        if(is_array($categories))
             return response()->json([
                 'status' => 'ok',
                 'categories' => $categories
             ], 200);
-        else{
-            return response()->json([
-                'status' => 'error',
-                'categories' => []
-            ], 200);
-        }
+        return response()->json([
+            'status' => 'error',
+            'code' => 'error-happened',
+            'message' => $categories
+        ], 200);
     }
 
     public function getCategory()

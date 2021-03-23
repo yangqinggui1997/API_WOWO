@@ -33,13 +33,13 @@ $router->group(['middleware' => 'jwt.auth'], function() use ($router) {
 $router->group(['prefix' => 'post'], function() use ($router)
 {
     $router->get('', ['uses' => 'PostController@getPost']);
-    $router->get('get', ['uses' => 'PostController@getPosts']);
+    $router->get('get', ['uses' => 'PostController@getOrFilter']);
     $router->get('relate', ['uses' => 'PostController@getRelatePosts']);
     $router->post('like', ['uses' => 'PostController@like']);
     $router->post('unlike', ['uses' => 'PostController@disLike']);
     $router->post('savePost', ['middleware' => 'jwt.auth', 'uses' => 'PostController@savePost']);
     $router->post('unsavePost', ['middleware' => 'jwt.auth', 'uses' => 'PostController@unsavePost']);
-    $router->post('filter', ['uses' => 'PostController@filter']);
+    $router->post('filter', ['uses' => 'PostController@getOrFilter']);
 
 });
 //Video
@@ -69,4 +69,8 @@ $router->group(['prefix' => 'category'], function() use ($router) {
 //Location
 $router->group(['prefix' => 'location'], function() use ($router) {
     $router->get('get', ['uses' => 'LocationController@getLocation']);
+});
+//upload file
+$router->group(['prefix' => 'upload'], function() use ($router) {
+    $router->put('', ['middleware' => 'jwt.auth', 'uses' => 'UploadFileController@uploadFile']);
 });

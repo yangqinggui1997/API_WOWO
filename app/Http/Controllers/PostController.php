@@ -25,25 +25,25 @@ class PostController extends Controller
         if($validator->fails()){
             return response()->json([
                 'status' => 'error',
-                'code' => '',
+                'code' => 'validate-fail',
                 'message' => $validator->messages()
             ], 200);
         }
-
-        $page = $this->request->input('page');
-        $limit = $this->request->input('post_per_page');
-        $posts_query = (new Post())->get_posts_ramdom($limit, $page);
-        if($posts_query){
+        $data = array();
+        foreach($this->request->all() as $key => $value){
+            $data[$key] = $value;
+        }
+        $posts_query = (new Post())->get_posts_ramdom($data);
+        if(is_array($posts_query))
             return response()->json([
                 'status' => 'ok',
                 'posts' => $posts_query
             ], 200);
-        } else {
-            return response()->json([
-                'status' => 'ok',
-                'posts' => []
-            ], 200);
-        }
+        return response()->json([
+            'status' => 'error',
+            'code' => 'error-happened',
+            'message' => $posts_query
+        ], 200);
     }
 
     public function getPost(){
@@ -60,22 +60,20 @@ class PostController extends Controller
         }
 
         $id = $this->request->input('id');
-
         $posts_query = (new Post())->get_post($id);
-        if($posts_query){
+        if(is_array($posts_query))
             return response()->json([
                 'status' => 'ok',
-                'post' => $posts_query
+                'post' => $posts_query[0]
             ], 200);
-        } else {
-            return response()->json([
-                'status' => 'ok',
-                'post' =>  []
-            ], 200);
-        }
+        return response()->json([
+            'status' => 'error',
+            'code' => 'error-happened',
+            'message' => $posts_query
+        ], 200);
     }
 
-    public function getOrFilter($closure)
+    public function getOrFilter()
     {
         $validator = Validator::make($this->request->all(), [
             'id_user' => 'numeric',
@@ -83,123 +81,72 @@ class PostController extends Controller
             'post_per_page' => 'numeric',
             'location' => 'numeric'
         ]);
+        if($validator->fails())
+            return response()->json([
+                'status' => 'error',
+                'code' => 'validate-fail',
+                'message' => $validator->messages()
+            ], 200);
+
         $data = array();
         foreach($this->request->all() as $key => $value){
             $data[$key] = $value;
         }
-        $posts_query = $closure($data);
-        if($posts_query){
+        $posts_query = (new Post())->get_posts($data);
+        if(is_array($posts_query))
             return response()->json([
                 'status' => 'ok',
                 'posts' => $posts_query
             ], 200);
-        } else {
-            return response()->json([
-                'status' => 'ok',
-                'posts' => $posts_query
-            ], 200);
-        }
-    }
-
-    public function getPosts()
-    {
-        return $this->getOrFilter(function($data){return (new Post())->get_posts($data);});
-    }
-
-    public function filter()
-    {
-        return $this->getOrFilter(function($data){return (new Post())->get_posts($data);});
+        return response()->json([
+            'status' => 'error',
+            'code' => 'error-happened',
+            'message' => $posts_query
+        ], 200);
     }
 
     public function likeOrDislike($closure)
     {
-        if($closure)
+        $validator = Validator::make($this->request->all(),[
+            'id'     => 'required|numeric'
+        ]);
+
+        if($validator->fails())
+            return response()->json([
+                'status' => 'error',
+                'code' => 'validate-fail',
+                'message' => $validator->messages()
+            ], 200);
+        if($closure($this->request))
             return response()->json([
                 'status' => 'ok'
             ], 200);
         else
             return response()->json([
                 'status' => 'error',
-                'code' => 'have-wrong',
-                'message' => "Something went wrong!"
+                'code' => 'error-happened',
+                'message' => "false"
             ], 200);
     }
 
     public function like()
     {
-        $validator = Validator::make($this->request->all(),[
-            'id'     => 'required|numeric'
-        ]);
-
-        if($validator->fails())
-            return response()->json([
-                'status' => 'error',
-                'code' => 'validate-fail',
-                'message' => $validator->messages()
-            ], 200);
-
-        return $this->likeOrDislike((new Post())->like($this->request));
+        return $this->likeOrDislike(function ($data){return (new Post())->like($data);});
     }
 
     public function disLike()
     {
-        $validator = Validator::make($this->request->all(),[
-            'id'     => 'required|numeric'
-        ]);
-
-        if($validator->fails())
-            return response()->json([
-                'status' => 'error',
-                'code' => 'validate-fail',
-                'message' => $validator->messages()
-            ], 200);
-
-        return $this->likeOrDislike((new Post())->disLike($this->request));
-    }
-
-    public function saveOrUnSavePost($closure)
-    {
-        if($closure)
-            return response()->json([
-                'status' => 'ok',
-            ], 200);
-        return response()->json([
-                'status' => 'error',
-                'code' => 'have-wrong',
-                'message' => "Something went wrong!"
-            ], 200);
-
+        return $this->likeOrDislike(function ($data){return (new Post())->disLike($data);});
     }
 
     public function savePost()
     {
-        $validator = Validator::make($this->request->all(),[
-            'id'     => 'required|numeric'
-        ]);
 
-        if($validator->fails())
-            return response()->json([
-                'status' => 'error',
-                'code' => 'validate-fail',
-                'message' => $validator->messages()
-            ], 200);
-
-        return $this->saveOrUnSavePost((new Post())->savePost($this->request));
+        return $this->likeOrDislike(function ($data){return (new Post())->savePost($data);});
     }
 
     public function unSavePost()
     {
-        $validator = Validator::make($this->request->all(),[
-            'id'     => 'required|numeric'
-        ]);
-
-        if($validator->fails())
-            return response()->json([
-                'status' => 'error',
-                'code' => 'validate-fail',
-                'message' => $validator->messages()
-            ], 200);
-
-        return $this->saveOrUnSavePost((new Post())->unSavePost($this->request));
+        return $this->likeOrDislike(function ($data) {return (new Post())->unSavePost($this->request);});
     }
 }

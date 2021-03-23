@@ -12,26 +12,35 @@ class Location extends Model
         $this->prefix = env("DB_PREFIX");
     }
 
-    public function getLocation($lang = 'vi', $id = NULL, $id_parent = NULL)
+    public function getLocation($args = [])
     {
+        $default_args = [
+            'lang' => 'vi',
+            'id' => -1,
+            'id_parent' => -1
+        ];
+        $args = array_merge($default_args, $args);
+        $id = $args["id"];
+        $id_parent = $args["id_parent"];
         $list_key = implode(',',[
             'id',
             'id_parent',
-            'tenbaiviet_'.$lang.' AS name',
+            'tenbaiviet_'.$args["lang"].' AS name',
             'seo_name',
         ]);
         //String Query
-        $where = "";
         try
         {
             //Query
             $query = false;
-            if($id_parent >= 0 && !is_null($id_parent))
+            if($id_parent >= 0 && !is_null($id_parent) && $id >= 1)
+                $query = DB::select("SELECT ". $list_key ." FROM ". $this->prefix ."diadiem WHERE id_parent = ".$id_parent." AND id = ".$id." ORDER BY catasort");
+            else if($id_parent >= 0 && !is_null($id_parent))
                 $query = DB::select("SELECT ". $list_key ." FROM ". $this->prefix ."diadiem WHERE id_parent = ".$id_parent." ORDER BY catasort");
             else if($id >= 1)
                 $query = DB::select("SELECT ". $list_key ." FROM ". $this->prefix ."diadiem WHERE id = ?", [$id]);
             else
-                $query = DB::select("SELECT ". $list_key ." FROM ". $this->prefix ."diadiem WHERE showhi = 1". $where." ORDER BY id_parent");
+                $query = DB::select("SELECT ". $list_key ." FROM ". $this->prefix ."diadiem WHERE showhi = 1 ORDER BY id_parent");
 
             if(!$query)
                 return false;

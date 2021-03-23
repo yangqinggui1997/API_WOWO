@@ -32,35 +32,23 @@ class LocationController extends Controller
         if($validator->fails())
             return response()->json([
                 'status' => 'error',
-                'code' => '',
+                'code' => 'validate-fail',
                 'message' => $validator->messages()
             ], 200);
-        $id = $this->request->input("id");
-        $lang = $this->request->input("lang");
-        $lang = (is_null($lang) || empty($lang)) ? 'vi':$lang;
-        $id_parent = $this->request->input("id_parent");
-            
-        try
-        {
-            $query = (new Location())->getLocation($lang,$id,$id_parent);
-            if(is_array($query))
-                return response()->json([
-                    'status' => 'ok',
-                    'location' => $query
-                ], 200);
-            return response()->json([
-                'status' => 'error',
-                'code' => '',
-                'message' => $query
-            ], 200);
+        $data = array();
+        foreach($this->request->all() as $key => $value){
+            $data[$key] = $value;
         }
-        catch(\Exception $e)
-        {
+        $query = (new Location())->getLocation($data);
+        if(is_array($query))
             return response()->json([
-                'status' => 'error',
-                'code' => '',
-                'message' => $e->getMessage()
+                'status' => 'ok',
+                'location' => $query
             ], 200);
-        }
+        return response()->json([
+            'status' => 'error',
+            'code' => 'error-happened',
+            'message' => $query
+        ], 200);
     }
 }

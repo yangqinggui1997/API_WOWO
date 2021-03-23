@@ -20,11 +20,11 @@ class PostImageController extends Controller
     {
         $validator = Validator::make($this->request->all(),
         [
-            'id_baiviet'     => 'required|numeric'
+            'id_post'     => 'required|numeric'
         ],
         [
-            'id_baiviet.required' => 'id_baiviet is required!',
-            'id_baiviet.numeric' => 'id_baiviet is number!'
+            'id_post.required' => 'id_post is required!',
+            'id_post.numeric' => 'id_post is number!'
         ]);
 
         if($validator->fails())
@@ -37,28 +37,16 @@ class PostImageController extends Controller
         foreach($this->request->all() as $key => $value){
             $data[$key] = $value;
         }
-        
-        try
-        {
-            $images = (new PostImage())->getPostImage($data);
-            if(is_array($images))
-                return response()->json([
-                    'status' => 'ok',
-                    'image' => (count($images) > 1) ? $images : $images[0]
-                ], 200);
+        $images = (new PostImage())->getPostImage($data);
+        if(is_array($images))
             return response()->json([
-                'status' => 'error',
-                'code' => '',
-                'message' => $images
-                ], 200);
-        }
-        catch(\Exception $e)
-        {
-            return response()->json([
-                'status' => 'error',
-                'code' => '',
-                'message' => $e->getMessage()
+                'status' => 'ok',
+                'image' => array(['count' => count($images), 'image' => $images])
             ], 200);
-        }
+        return response()->json([
+            'status' => 'error',
+            'code' => 'error-happened',
+            'message' => $images
+            ], 200);
     }
 }

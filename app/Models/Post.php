@@ -30,19 +30,20 @@ class Post extends Model
             'key_seacrh' => '',
             'price' => '',
             'feature' => '',
-            'other_filter' => ''
+            'other_filter' => '',
+            'lang' => 'vi'
         ];
 
         $args = array_merge($default_args, $args);
         $step = 2; //post type post
-        $lang = 'vi';
+        $lang = (empty($args['lang']) || is_null($args['lang'])) ? 'vi': (($args['lang'] != 'en' || $args['lang'] != 'vi') ? 'vi' : $args['lang']);
         $list_key = implode(',',[
             'post.id',
             'post.id_user',
             'post.id_parent',
-            'post.tenbaiviet_'.$lang.' as tenbaiviet',
-            'post.mota_'. $lang.' as mota',
-            'post.noidung_'.$lang.' as noidung',
+            'post.tenbaiviet_'.$lang.' AS tilte',
+            'post.mota_'. $lang.' AS description',
+            'post.noidung_'.$lang.' AS content',
             'post.seo_name',
             'post.is_noibat',
             'post.is_uutien',
@@ -77,19 +78,20 @@ class Post extends Model
         {
             $order_by = explode(',', $args['order_by']);
             $order = explode(',', $args['order']);
-            foreach($order_by as $key => $value)
-                $sort .= $sort ? ", post.". $value ." ". $order[$key] : " post.". $value ." ". $order[$key];
+            if(count($order_by) === count($order))
+                foreach($order_by as $key => $value)
+                    $sort .= $sort ? ", post.". $value ." ". $order[$key] : " post.". $value ." ". $order[$key];
+            else
+                $sort = "post.id DESC";
         }
-        if(!empty($args['user_id']))
-        {
-            $where .= " AND post.user_id = ". $args['user_id'] ." ";
-        }
-        if( !empty($args['categories']) ) // filter option follow categories
+        if(!empty($args['id_user']))
+            $where .= " AND post.id_user = ". $args['id_user'] ." ";
+        if(!empty($args['categories'])) // filter option follow categories
             $where .= " AND post.id_parent = ". $args['categories'] ." ";
 
-        if( !empty($args['location']) ) // filter option follow location
+        if(!empty($args['location'])) // filter option follow location
             $where .= " AND (post.tinh_thanh = ". $args['location'] ." OR post.quan_huyen = ". $args['location'] ." OR post.phuong_xa = ". $args['location'] .") ";
-        if( !empty($args['price']) ) // filter option follow price
+        if(!empty($args['price'])) // filter option follow price
         {
             $price = json_decode($args['price']);
             $where .= property_exists($price, 'min') && property_exists($price, 'max') ? " AND (post.giatien BETWEEN ". $price->min." AND ".$price->max.") " : (property_exists($price, 'min') ? " AND post.giatien >= ". $price->min : (property_exists($price, 'max') ? " AND post.giatien <= ". $price->max :""));
@@ -139,20 +141,20 @@ class Post extends Model
         $where .= " AND post.id_user IN (SELECT `id` FROM ". $this->prefix . "members WHERE `showhi` = 1 AND `phanquyen` = 0)";
         //Query
         try {
+            $data = [];
             $query = DB::select("SELECT ". $list_key ." FROM ". $this->prefix ."baiviet AS post LEFT JOIN ". $this->prefix ."members AS user ON post.id_user = user.id LEFT JOIN ". $this->prefix . "binhluan AS comments ON post.id = comments.id_sp AND comments.showhi = 1 WHERE post.showhi = 1 AND post.step IN (".$step.") ". $where ." GROUP BY post.id ".($sort ? " ORDER BY ".$sort : "")." LIMIT $start,".$numview);
             if(!$query)
-                return false;
-            $data = [];
+                return $data;
             foreach($query as $key => $post){
                 $data[] = [
                     'id' => $post->id,
                     'id_user' => $post->id_user,
-                    'id_parent' => $post->id_parent,
-                    'tenbaiviet' => $post->tenbaiviet,
-                    'mota' => $post->mota,
-                    'noidung' => $post->noidung,
+                    'id_category' => $post->id_parent,
+                    'tilte' => $post->tilte,
+                    'description' => $post->description,
+                    'content' => $post->content,
                     'seo_name' => $post->seo_name,
-                    'giatien' => $post->giatien,
+                    'price' => $post->giatien,
                     'is_noibat' => $post->is_noibat,
                     'is_uutien' => $post->is_uutien,
                     'is_daytin' => $post->is_daytin,
@@ -172,15 +174,15 @@ class Post extends Model
                     'comments' => $post->total_comments,
                     'user' => [
                         'id' => $post->id_user,
-                        'hoten' => $post->hoten,
+                        'name' => $post->hoten,
                         'icon' => (!empty($post->user_icon)) ? $this->endpoint.'datafiles/member/'.$post->id_user.'/'.$post->user_icon : ""
                     ],
                 ];
             }
             return $data;
         } catch (\Throwable $th) {
-            return $th->getMessage();
-            // return false;
+            // return $th->getMessage();
+            return false;
         }
     }
 
@@ -227,10 +229,11 @@ class Post extends Model
                     'id' => $post->id,
                     'id_user' => $post->id_user,
                     'id_parent' => $post->id_parent,
-                    'tenbaiviet' => $post->tenbaiviet,
-                    'mota' => $post->mota,
-                    'noidung' => $post->noidung,
+                    'title' => $post->tenbaiviet,
+                    'description' => $post->mota,
+                    'content' => $post->noidung,
                     'seo_name' => $post->seo_name,
+                    'price' => $post->giatien,
                     'is_noibat' => $post->is_noibat,
                     'is_uutien' => $post->is_uutien,
                     'is_daytin' => $post->is_daytin,
@@ -250,7 +253,7 @@ class Post extends Model
                     'comments' => $post->total_comments,
                     'user' => [
                         'id' => $post->id_user,
-                        'hoten' => $post->hoten,
+                        'name' => $post->hoten,
                         'icon' => (!empty($post->user_icon)) ? $this->endpoint.'datafiles/member/'.$post->id_user.'/'.$post->user_icon : ""
                     ],
                 ];
@@ -312,7 +315,7 @@ class Post extends Model
             if(count($bv))
                 DB::transaction(function () use($request, $save)
                 {
-                    DB::table("yeuthich")->where([["id_baiviet", $request->id_baiviet], ["id_member", $request->auth->id]])->update(["showhi" => $save]);
+                    DB::table("yeuthich")->where([["id_baiviet", $request->id], ["id_member", $request->auth->id]])->update(["showhi" => $save]);
                 },5);
             else if($save)
                 DB::transaction(function () use($request, $save)
@@ -338,12 +341,13 @@ class Post extends Model
         return (new Post)->saveOrUnSavePost($request, 0);
     }
 
-    public function get_posts_ramdom($limit, $page){
-        $videos = $this->get_posts([
+    public function get_posts_ramdom($args = [])
+    {
+        $posts = $this->get_posts([
             'random' => true,
-            'post_per_page' => $limit,
-            'page' => $page
+            'post_per_page' => $args["post_per_page"],
+            'page' => $args["page"]
         ]);
-        return $videos;
+        return $posts;
     }
 }
